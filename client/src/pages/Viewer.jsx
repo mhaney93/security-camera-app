@@ -1,0 +1,263 @@
+import { useEffect, useRef, useState, useCallback } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { socket } from '../socket';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+
+const ICE_CONFIG = {
+  iceServers: [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+  ],
+};
+
+// Leaflet default icon fix for Vite
+const CAMERA_ICON = L.divIcon({
+  html: '<div style="width:14px;height:14px;border-radius:50%;background:#00e676;border:3px solid #fff;box-shadow:0 0 6px #00e676"></div>',
+  iconSize: [14, 14],
+  iconAnchor: [7, 7],
+  className: '',
+});
+
+export default function Viewer() {
+  const { roomId } = useParams();
+  const navigate = useNavigate();
+
+  const videoRef = useRef(null);
+  const pc = useRef(null);
+  const mapDivRef = useRef(null);
+  const mapRef = useRef(null);
+  const markerRef = useRef(null);
+  const pathRef = useRef(null);
+  const pathCoords = useRef([]);
+
+  const [connected, setConnected] = useState(false);
+  const [cameraOnline, setCameraOnline] = useState(false);
+  const [gps, setGps] = useState(null);
+  const [recordings, setRecordings] = useState([]);
+  const [gpsHistory, setGpsHistory] = useState([]);
+  const [tab, setTab] = useState('map');
+  const [loadingRec, setLoadingRec] = useState(false);
+  const [motionAlert, setMotionAlert] = useState(false);
+
+  // Init Leaflet map once the div is mounted
+  useEffect(() => {
+    const map = L.map(mapDivRef.current, { zoomControl: true }).setView([20, 0], 2);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+      maxZoom: 19,
+    }).addTo(map);
+    mapRef.current = map;
+    markerRef.current = L.marker([20, 0], { icon: CAMERA_ICON }).addTo(map);
+    pathRef.current = L.polyline([], { color: '#00e676', weight: 3, opacity: 0.7 }).addTo(map);
+    return () => map.remove();
+  }, []);
+
+  // Invalidate map size when tab switches to map
+  useEffect(() => {
+    if (tab === 'map') {
+      setTimeout(() => mapRef.current?.invalidateSize(), 50);
+    }
+  }, [tab]);
+
+  const updateMap = useCallback((lat, lng) => {
+    if (!mapRef.current) return;
+    const latlng = [lat, lng];
+    markerRef.current.setLatLng(latlng);
+    pathCoords.current.push(latlng);
+    pathRef.current.setLatLngs(pathCoords.current);
+    mapRef.current.setView(latlng, Math.max(mapRef.current.getZoom(), 15), { animate: true });
+  }, []);
+
+  // Load GPS history into map path on mount
+  async function loadGpsHistory() {
+    try {
+      const res = await fetch(`/api/gps/${roomId}`);
+      const data = await res.json();
+      setGpsHistory(data);
+      if (data.length > 0 && mapRef.current) {
+        const coords = [...data].reverse().map((p) => [p.lat, p.lng]);
+        pathCoords.current = coords;
+        pathRef.current?.setLatLngs(coords);
+        const last = coords[coords.length - 1];
+        markerRef.current?.setLatLng(last);
+        mapRef.current.setView(last, 15);
+      }
+    } catch { /* ignore */ }
+  }
+
+  async function loadRecordings() {
+    setLoadingRec(true);
+    try {
+      const res = await fetch(`/api/recordings/${roomId}`);
+      setRecordings(await res.json());
+    } catch { /* ignore */ }
+    setLoadingRec(false);
+  }
+
+  useEffect(() => {
+    socket.connect();
+    socket.emit('join-room', { roomId, role: 'viewer' });
+
+    socket.on('room-joined', ({ hasCamera }) => {
+      setCameraOnline(!!hasCamera);
+    });
+
+    socket.on('camera-disconnected', () => {
+      setCameraOnline(false);
+      setConnected(false);
+      if (videoRef.current) videoRef.current.srcObject = null;
+      pc.current?.close();
+      pc.current = null;
+    });
+
+    socket.on('webrtc-offer', async ({ offer, fromId }) => {
+      const conn = new RTCPeerConnection(ICE_CONFIG);
+      pc.current = conn;
+
+      conn.ontrack = ({ streams }) => {
+        if (videoRef.current) videoRef.current.srcObject = streams[0];
+        setConnected(true);
+      };
+
+      conn.onicecandidate = ({ candidate }) => {
+        if (candidate) socket.emit('webrtc-ice', { candidate, targetId: fromId });
+      };
+
+      conn.onconnectionstatechange = () => {
+        if (['disconnected', 'failed'].includes(conn.connectionState)) {
+          setConnected(false);
+        }
+      };
+
+      await conn.setRemoteDescription(offer);
+      const answer = await conn.createAnswer();
+      await conn.setLocalDescription(answer);
+      socket.emit('webrtc-answer', { answer, targetId: fromId });
+    });
+
+    socket.on('webrtc-ice', async ({ candidate }) => {
+      try {
+        await pc.current?.addIceCandidate(candidate);
+      } catch { /* ignore */ }
+    });
+
+    socket.on('gps-update', ({ lat, lng, accuracy, timestamp }) => {
+      setGps({ lat, lng, accuracy, timestamp });
+      updateMap(lat, lng);
+    });
+
+    socket.on('motion-detected', () => {
+      setMotionAlert(true);
+      setTimeout(() => setMotionAlert(false), 8000);
+    });
+
+    loadGpsHistory();
+    loadRecordings();
+
+    return () => {
+      pc.current?.close();
+      socket.off('room-joined');
+      socket.off('camera-disconnected');
+      socket.off('webrtc-offer');
+      socket.off('webrtc-ice');
+      socket.off('gps-update');
+      socket.off('motion-detected');
+      socket.disconnect();
+    };
+  }, [roomId, updateMap]);
+
+  return (
+    <div className="page">
+      <div className="viewer-header">
+        <h2>Room <strong>{roomId}</strong></h2>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {connected ? (
+            <span className="badge badge-live"><span className="dot" /> Live</span>
+          ) : cameraOnline ? (
+            <span className="badge badge-waiting">Connecting...</span>
+          ) : (
+            <span className="badge badge-waiting">No camera</span>
+          )}
+          <button className="btn-ghost btn-sm" onClick={() => navigate('/')}>Back</button>
+        </div>
+      </div>
+
+      {motionAlert && (
+        <div className="motion-alert">
+          Motion detected!
+        </div>
+      )}
+
+      <video ref={videoRef} autoPlay playsInline className="remote-video" />
+
+      {gps && (
+        <div className="gps-info">
+          <strong>GPS</strong>&nbsp; {gps.lat.toFixed(6)}, {gps.lng.toFixed(6)}
+          &nbsp;&nbsp;±{Math.round(gps.accuracy ?? 0)}m
+          &nbsp;&nbsp;{new Date(gps.timestamp).toLocaleTimeString()}
+        </div>
+      )}
+
+      <div className="tabs">
+        <button className={`tab-btn${tab === 'map' ? ' active' : ''}`} onClick={() => setTab('map')}>
+          Map
+        </button>
+        <button
+          className={`tab-btn${tab === 'recordings' ? ' active' : ''}`}
+          onClick={() => { setTab('recordings'); loadRecordings(); }}
+        >
+          Recordings
+        </button>
+        <button
+          className={`tab-btn${tab === 'gps' ? ' active' : ''}`}
+          onClick={() => setTab('gps')}
+        >
+          GPS Log
+        </button>
+      </div>
+
+      {/* Map always rendered so Leaflet keeps its state; hidden via CSS */}
+      <div
+        ref={mapDivRef}
+        className={`map-container${tab !== 'map' ? ' hidden' : ''}`}
+      />
+
+      {tab === 'recordings' && (
+        <div className="recordings-list">
+          {loadingRec ? (
+            <p className="empty-state">Loading...</p>
+          ) : recordings.length === 0 ? (
+            <p className="empty-state">No recordings yet. Recordings appear every 5 minutes while the camera is active.</p>
+          ) : (
+            recordings.map((rec) => (
+              <div key={rec.id} className="recording-item">
+                <span>{new Date(rec.timestamp).toLocaleString()}</span>
+                <a href={`/api/recordings/file/${rec.filename}`} target="_blank" rel="noreferrer">
+                  Play
+                </a>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      {tab === 'gps' && (
+        <div className="gps-history">
+          {gpsHistory.length === 0 ? (
+            <p className="empty-state">No GPS history for this room yet.</p>
+          ) : (
+            gpsHistory.map((p) => (
+              <div key={p.id} className="gps-point">
+                <span>{new Date(p.timestamp).toLocaleString()}</span>
+                {'  '}
+                {p.lat.toFixed(6)}, {p.lng.toFixed(6)}
+                {p.accuracy ? `  ±${Math.round(p.accuracy)}m` : ''}
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
