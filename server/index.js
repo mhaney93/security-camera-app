@@ -8,8 +8,8 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 const { randomUUID } = require('crypto');
-const { initDb, saveGpsPoint, getGpsHistory, saveRecording, getRecordings } = require('./db');
-const { storeRecording, streamRecording, uploadsDir, USE_R2 } = require('./storage');
+const { initDb, saveGpsPoint, getGpsHistory, saveRecording, getRecordings, getExpiredRecordings, deleteExpiredRecordings } = require('./db');
+const { storeRecording, streamRecording, deleteRecording, uploadsDir, USE_R2 } = require('./storage');
 
 const app = express();
 const httpServer = http.createServer(app);
@@ -159,6 +159,21 @@ io.on('connection', (socket) => {
   });
 });
 
+const RETENTION_MS = 48 * 60 * 60 * 1000; // 48 hours
+
+async function cleanupOldRecordings() {
+  const cutoff = Date.now() - RETENTION_MS;
+  try {
+    const expired = await getExpiredRecordings(cutoff);
+    if (expired.length === 0) return;
+    await Promise.allSettled(expired.map((r) => deleteRecording(r.filename)));
+    await deleteExpiredRecordings(cutoff);
+    console.log(`Cleanup: removed ${expired.length} recording(s) older than 48h`);
+  } catch (err) {
+    console.error('Cleanup error:', err.message);
+  }
+}
+
 async function start() {
   await initDb();
   const storageMode = USE_R2 ? 'Cloudflare R2' : 'local disk';
@@ -167,6 +182,10 @@ async function start() {
   httpServer.listen(PORT, () =>
     console.log(`SecureCam on http://localhost:${PORT}  [db: ${dbMode}] [storage: ${storageMode}]`)
   );
+
+  // Run cleanup immediately on boot, then every hour
+  cleanupOldRecordings();
+  setInterval(cleanupOldRecordings, 60 * 60 * 1000);
 }
 
 start().catch(console.error);

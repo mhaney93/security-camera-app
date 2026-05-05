@@ -62,4 +62,17 @@ async function streamRecording(key, res) {
   }
 }
 
-module.exports = { storeRecording, streamRecording, uploadsDir, USE_R2 };
+async function deleteRecording(key) {
+  if (USE_R2) {
+    const { DeleteObjectCommand } = require('@aws-sdk/client-s3');
+    await r2().send(new DeleteObjectCommand({
+      Bucket: process.env.R2_BUCKET_NAME,
+      Key: path.basename(key),
+    }));
+  } else {
+    const file = path.join(uploadsDir, path.basename(key));
+    if (fs.existsSync(file)) fs.unlinkSync(file);
+  }
+}
+
+module.exports = { storeRecording, streamRecording, deleteRecording, uploadsDir, USE_R2 };

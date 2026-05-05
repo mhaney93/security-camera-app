@@ -47,4 +47,12 @@ async function getRecordings(roomId) {
   ).all(roomId);
 }
 
-module.exports = { initDb, saveGpsPoint, getGpsHistory, saveRecording, getRecordings };
+async function getExpiredRecordings(cutoff) {
+  return db.prepare('SELECT * FROM recordings WHERE timestamp < ?').all(cutoff);
+}
+
+async function deleteExpiredRecordings(cutoff) {
+  db.prepare('DELETE FROM recordings WHERE timestamp < ?').run(cutoff);
+}
+
+module.exports = { initDb, saveGpsPoint, getGpsHistory, saveRecording, getRecordings, getExpiredRecordings, deleteExpiredRecordings };
