@@ -231,19 +231,19 @@ export default function Viewer() {
             <div className="recording-player">
               <div className="recording-player-header">
                 <span>{new Date(Number(playingRec.timestamp)).toLocaleString()}</span>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button className="btn-ghost btn-sm" onClick={() => requestFullscreen(recVideoRef.current)}>⛶</button>
-                  <button className="btn-ghost btn-sm" onClick={() => setPlayingRec(null)}>Close</button>
-                </div>
+                <button className="btn-ghost btn-sm" onClick={() => setPlayingRec(null)}>Close</button>
               </div>
-              <video
-                ref={recVideoRef}
-                src={`/api/recordings/file/${playingRec.filename}`}
-                controls
-                playsInline
-                autoPlay
-                className="recording-video"
-              />
+              <div style={{ position: 'relative' }}>
+                <video
+                  ref={recVideoRef}
+                  src={`/api/recordings/file/${playingRec.filename}`}
+                  controls
+                  playsInline
+                  autoPlay
+                  className="recording-video"
+                />
+                <button className="video-overlay-btn right" onClick={() => requestFullscreen(recVideoRef.current)} title="Fullscreen">⛶</button>
+              </div>
             </div>
           )}
           {loadingRec ? (
