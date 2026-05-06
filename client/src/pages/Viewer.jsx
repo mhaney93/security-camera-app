@@ -232,7 +232,7 @@ export default function Viewer() {
           ) : (
             recordings.map((rec) => (
               <div key={rec.id} className="recording-item">
-                <span>{new Date(rec.timestamp).toLocaleString()}</span>
+                <span>{new Date(Number(rec.timestamp)).toLocaleString()}</span>
                 <a href={`/api/recordings/file/${rec.filename}`} target="_blank" rel="noreferrer">
                   Play
                 </a>
@@ -249,7 +249,7 @@ export default function Viewer() {
           ) : (
             gpsHistory.map((p) => (
               <div key={p.id} className="gps-point">
-                <span>{new Date(p.timestamp).toLocaleString()}</span>
+                <span>{new Date(Number(p.timestamp)).toLocaleString()}</span>
                 {'  '}
                 {p.lat.toFixed(6)}, {p.lng.toFixed(6)}
                 {p.accuracy ? `  ±${Math.round(p.accuracy)}m` : ''}
