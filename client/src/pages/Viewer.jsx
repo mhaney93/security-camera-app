@@ -188,29 +188,25 @@ export default function Viewer() {
 
       {motionAlert && <div className="motion-alert">Motion detected!</div>}
 
-      {needsTap && (
-        <button className="btn-primary" onClick={() => { videoRef.current?.play(); setNeedsTap(false); }}>
-          Tap to enable audio
-        </button>
-      )}
-
       <div style={{ position: 'relative' }}>
         <video ref={videoRef} autoPlay playsInline className="remote-video" />
-        <button className="fullscreen-btn" onClick={() => requestFullscreen(videoRef.current)} title="Fullscreen">⛶</button>
-      </div>
-
-      <div style={{ display: 'flex', gap: 8 }}>
         <button
-          className={isDeafened ? 'btn-danger' : 'btn-ghost'}
+          className="video-overlay-btn left"
+          title={needsTap ? 'Tap to enable audio' : isDeafened ? 'Unmute audio' : 'Mute audio'}
           onClick={() => {
+            if (needsTap) {
+              videoRef.current?.play();
+              setNeedsTap(false);
+              return;
+            }
             const next = !isDeafened;
             if (videoRef.current) videoRef.current.muted = next;
             setIsDeafened(next);
           }}
-          style={{ flex: 1 }}
         >
-          {isDeafened ? 'Audio Off — Tap to Unmute' : 'Mute Audio'}
+          {needsTap ? '▶🔊' : isDeafened ? '🔇' : '🔊'}
         </button>
+        <button className="video-overlay-btn right" onClick={() => requestFullscreen(videoRef.current)} title="Fullscreen">⛶</button>
       </div>
 
       {gps && (

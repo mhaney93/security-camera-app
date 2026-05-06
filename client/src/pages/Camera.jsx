@@ -310,7 +310,10 @@ export default function Camera() {
           playsInline
           className={`preview-video${usingBack ? ' back' : ''}`}
         />
-        <button className="fullscreen-btn" onClick={enterFullscreen} title="Fullscreen">⛶</button>
+        <button className="video-overlay-btn left" onClick={toggleMute} title={isMuted ? 'Unmute mic' : 'Mute mic'}>
+          {isMuted ? '🔇' : '🎙'}
+        </button>
+        <button className="video-overlay-btn right" onClick={enterFullscreen} title="Fullscreen">⛶</button>
       </div>
 
       {/* Hidden canvas used for motion detection frame comparison */}
@@ -343,14 +346,6 @@ export default function Camera() {
       ) : (
         <div className="gps-info">GPS: waiting for signal...</div>
       )}
-
-      <button
-        className={isMuted ? 'btn-danger' : 'btn-ghost'}
-        onClick={toggleMute}
-        style={{ width: '100%' }}
-      >
-        {isMuted ? 'Mic Off — Tap to Unmute' : 'Mute Mic'}
-      </button>
 
       <div className="motion-toggle">
         <label className="toggle-label">
