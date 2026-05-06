@@ -48,6 +48,7 @@ export default function Camera() {
   const recorder = useRef(null);
   const recInterval = useRef(null);
   const gpsWatcher = useRef(null);
+  const gpsRef = useRef(null);
   const isMounted = useRef(true);
 
   const [status, setStatus] = useState('Starting...');
@@ -61,10 +62,12 @@ export default function Camera() {
   const [usingBack, setUsingBack] = useState(true);
 
   const uploadChunk = useCallback(
-    async (blob) => {
+    async (blob, lat, lng) => {
       if (blob.size === 0) return;
       const form = new FormData();
       form.append('chunk', blob, 'recording.webm');
+      if (lat != null) form.append('lat', String(lat));
+      if (lng != null) form.append('lng', String(lng));
       try {
         await fetch(`/api/upload/${roomId}`, { method: 'POST', body: form });
       } catch {
@@ -79,6 +82,7 @@ export default function Camera() {
       const mimeType = getSupportedMimeType();
       const rec = new MediaRecorder(stream, mimeType ? { mimeType } : {});
       const chunks = [];
+      const startGps = gpsRef.current;
 
       rec.ondataavailable = (e) => {
         if (e.data.size > 0) chunks.push(e.data);
@@ -87,7 +91,7 @@ export default function Camera() {
       rec.onstop = () => {
         const blob = new Blob(chunks, { type: rec.mimeType || 'video/webm' });
         chunks.length = 0;
-        uploadChunk(blob);
+        uploadChunk(blob, startGps?.lat, startGps?.lng);
       };
 
       rec.start();
@@ -220,7 +224,9 @@ export default function Camera() {
         gpsWatcher.current = navigator.geolocation.watchPosition(
           ({ coords }) => {
             const { latitude: lat, longitude: lng, accuracy } = coords;
-            setGps({ lat, lng, accuracy });
+            const point = { lat, lng, accuracy };
+            setGps(point);
+            gpsRef.current = point;
             socket.emit('gps-update', { roomId, lat, lng, accuracy, timestamp: Date.now() });
           },
           null,

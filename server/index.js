@@ -8,7 +8,7 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 const { randomUUID } = require('crypto');
-const { initDb, saveGpsPoint, getGpsHistory, saveRecording, getRecordings, getExpiredRecordings, deleteExpiredRecordings } = require('./db');
+const { initDb, saveGpsPoint, getGpsHistory, saveRecording, getRecordings, getExpiredRecordings, deleteExpiredRecordings, deleteExpiredGps } = require('./db');
 const { storeRecording, streamRecording, deleteRecording, uploadsDir, USE_R2 } = require('./storage');
 
 const app = express();
@@ -35,8 +35,10 @@ const upload = multer({
 app.post('/api/upload/:roomId', upload.single('chunk'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file' });
   try {
+    const lat = req.body.lat ? parseFloat(req.body.lat) : null;
+    const lng = req.body.lng ? parseFloat(req.body.lng) : null;
     await storeRecording(req.file.path, req.file.filename);
-    await saveRecording(req.params.roomId, req.file.filename, Date.now());
+    await saveRecording(req.params.roomId, req.file.filename, Date.now(), lat, lng);
     res.json({ ok: true });
   } catch (err) {
     console.error('Upload error:', err.message);
@@ -159,10 +161,11 @@ io.on('connection', (socket) => {
   });
 });
 
-const RETENTION_MS = 48 * 60 * 60 * 1000; // 48 hours
+const RECORDING_RETENTION_MS = 48 * 60 * 60 * 1000; // 48 hours
+const GPS_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;   // 7 days
 
 async function cleanupOldRecordings() {
-  const cutoff = Date.now() - RETENTION_MS;
+  const cutoff = Date.now() - RECORDING_RETENTION_MS;
   try {
     const expired = await getExpiredRecordings(cutoff);
     if (expired.length === 0) return;
@@ -171,6 +174,15 @@ async function cleanupOldRecordings() {
     console.log(`Cleanup: removed ${expired.length} recording(s) older than 48h`);
   } catch (err) {
     console.error('Cleanup error:', err.message);
+  }
+}
+
+async function cleanupOldGps() {
+  const cutoff = Date.now() - GPS_RETENTION_MS;
+  try {
+    await deleteExpiredGps(cutoff);
+  } catch (err) {
+    console.error('GPS cleanup error:', err.message);
   }
 }
 
@@ -185,7 +197,9 @@ async function start() {
 
   // Run cleanup immediately on boot, then every hour
   cleanupOldRecordings();
+  cleanupOldGps();
   setInterval(cleanupOldRecordings, 60 * 60 * 1000);
+  setInterval(cleanupOldGps, 60 * 60 * 1000);
 }
 
 start().catch(console.error);

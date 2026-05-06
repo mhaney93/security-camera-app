@@ -22,9 +22,14 @@ async function initDb() {
       id SERIAL PRIMARY KEY,
       room_id TEXT NOT NULL,
       filename TEXT NOT NULL,
-      timestamp BIGINT NOT NULL
+      timestamp BIGINT NOT NULL,
+      lat DOUBLE PRECISION,
+      lng DOUBLE PRECISION
     );
   `);
+  // Migrations for existing databases
+  await pool.query('ALTER TABLE recordings ADD COLUMN IF NOT EXISTS lat DOUBLE PRECISION').catch(() => {});
+  await pool.query('ALTER TABLE recordings ADD COLUMN IF NOT EXISTS lng DOUBLE PRECISION').catch(() => {});
 }
 
 async function saveGpsPoint(roomId, lat, lng, accuracy, timestamp) {
@@ -42,10 +47,10 @@ async function getGpsHistory(roomId, limit = 2000) {
   return rows;
 }
 
-async function saveRecording(roomId, filename, timestamp) {
+async function saveRecording(roomId, filename, timestamp, lat, lng) {
   await pool.query(
-    'INSERT INTO recordings (room_id, filename, timestamp) VALUES ($1,$2,$3)',
-    [roomId, filename, timestamp]
+    'INSERT INTO recordings (room_id, filename, timestamp, lat, lng) VALUES ($1,$2,$3,$4,$5)',
+    [roomId, filename, timestamp, lat ?? null, lng ?? null]
   );
 }
 
@@ -66,4 +71,8 @@ async function deleteExpiredRecordings(cutoff) {
   await pool.query('DELETE FROM recordings WHERE timestamp < $1', [cutoff]);
 }
 
-module.exports = { initDb, saveGpsPoint, getGpsHistory, saveRecording, getRecordings, getExpiredRecordings, deleteExpiredRecordings };
+async function deleteExpiredGps(cutoff) {
+  await pool.query('DELETE FROM gps_history WHERE timestamp < $1', [cutoff]);
+}
+
+module.exports = { initDb, saveGpsPoint, getGpsHistory, saveRecording, getRecordings, getExpiredRecordings, deleteExpiredRecordings, deleteExpiredGps };

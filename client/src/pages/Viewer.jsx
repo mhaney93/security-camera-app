@@ -253,7 +253,12 @@ export default function Viewer() {
           ) : (
             recordings.map((rec) => (
               <div key={rec.id} className={`recording-item${playingRec?.id === rec.id ? ' active' : ''}`}>
-                <span>{new Date(Number(rec.timestamp)).toLocaleString()}</span>
+                <span>
+                  {new Date(Number(rec.timestamp)).toLocaleString()}
+                  {rec.lat != null && rec.lng != null && (
+                    <span className="rec-gps"> &nbsp;{Number(rec.lat).toFixed(5)}, {Number(rec.lng).toFixed(5)}</span>
+                  )}
+                </span>
                 <button className="btn-ghost btn-sm" onClick={() => setPlayingRec(playingRec?.id === rec.id ? null : rec)}>
                   {playingRec?.id === rec.id ? 'Close' : 'Play'}
                 </button>

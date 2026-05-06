@@ -245,6 +245,7 @@ input[type="text"]::placeholder { letter-spacing: 0; color: var(--muted); }
   gap: 8px;
 }
 .recording-item span { font-size: 0.85rem; color: var(--muted); }
+.rec-gps { font-family: monospace; font-size: 0.78rem; color: var(--accent); }
 .recording-item a {
   color: var(--accent);
   text-decoration: none;
