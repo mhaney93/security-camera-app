@@ -39,6 +39,8 @@ export default function Viewer() {
   const [tab, setTab] = useState('map');
   const [loadingRec, setLoadingRec] = useState(false);
   const [motionAlert, setMotionAlert] = useState(false);
+  const [isDeafened, setIsDeafened] = useState(false);
+  const [needsTap, setNeedsTap] = useState(false);
 
   // Init Leaflet map once the div is mounted
   useEffect(() => {
@@ -116,7 +118,10 @@ export default function Viewer() {
       pc.current = conn;
 
       conn.ontrack = ({ streams }) => {
-        if (videoRef.current) videoRef.current.srcObject = streams[0];
+        if (videoRef.current) {
+          videoRef.current.srcObject = streams[0];
+          videoRef.current.play().catch(() => setNeedsTap(true));
+        }
         setConnected(true);
       };
 
@@ -189,7 +194,31 @@ export default function Viewer() {
         </div>
       )}
 
+      {needsTap && (
+        <button
+          className="btn-primary"
+          onClick={() => {
+            videoRef.current?.play();
+            setNeedsTap(false);
+          }}
+        >
+          Tap to enable audio
+        </button>
+      )}
+
       <video ref={videoRef} autoPlay playsInline className="remote-video" />
+
+      <button
+        className={isDeafened ? 'btn-danger' : 'btn-ghost'}
+        onClick={() => {
+          const next = !isDeafened;
+          if (videoRef.current) videoRef.current.muted = next;
+          setIsDeafened(next);
+        }}
+        style={{ width: '100%' }}
+      >
+        {isDeafened ? 'Audio Off — Tap to Unmute' : 'Mute Audio'}
+      </button>
 
       {gps && (
         <div className="gps-info">

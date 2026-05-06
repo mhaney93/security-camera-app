@@ -55,6 +55,7 @@ export default function Camera() {
   const [isRecording, setIsRecording] = useState(false);
   const [motionActive, setMotionActive] = useState(false);
   const [motionEnabled, setMotionEnabled] = useState(true);
+  const [isMuted, setIsMuted] = useState(false);
   const [gps, setGps] = useState(null);
   const [copied, setCopied] = useState(false);
   const [usingBack, setUsingBack] = useState(true);
@@ -263,6 +264,13 @@ export default function Camera() {
     }
   }, [motionEnabled, status, startMotionDetection]);
 
+  function toggleMute() {
+    const audioTracks = localStream.current?.getAudioTracks() ?? [];
+    const next = !isMuted;
+    audioTracks.forEach((t) => { t.enabled = !next; });
+    setIsMuted(next);
+  }
+
   function copyCode() {
     navigator.clipboard.writeText(roomId).then(() => {
       setCopied(true);
@@ -324,6 +332,14 @@ export default function Camera() {
       ) : (
         <div className="gps-info">GPS: waiting for signal...</div>
       )}
+
+      <button
+        className={isMuted ? 'btn-danger' : 'btn-ghost'}
+        onClick={toggleMute}
+        style={{ width: '100%' }}
+      >
+        {isMuted ? 'Mic Off — Tap to Unmute' : 'Mute Mic'}
+      </button>
 
       <div className="motion-toggle">
         <label className="toggle-label">
