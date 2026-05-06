@@ -54,7 +54,7 @@ app.get('/api/recordings/:roomId', async (req, res) => {
 
 app.get('/api/recordings/file/:key', async (req, res) => {
   try {
-    await streamRecording(path.basename(req.params.key), res);
+    await streamRecording(path.basename(req.params.key), req, res);
   } catch {
     res.status(404).json({ error: 'Not found' });
   }

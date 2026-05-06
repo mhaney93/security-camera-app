@@ -11,7 +11,6 @@ const ICE_CONFIG = {
   ],
 };
 
-// Leaflet default icon fix for Vite
 const CAMERA_ICON = L.divIcon({
   html: '<div style="width:14px;height:14px;border-radius:50%;background:#00e676;border:3px solid #fff;box-shadow:0 0 6px #00e676"></div>',
   iconSize: [14, 14],
@@ -19,11 +18,19 @@ const CAMERA_ICON = L.divIcon({
   className: '',
 });
 
+function requestFullscreen(el) {
+  if (!el) return;
+  if (el.requestFullscreen) el.requestFullscreen();
+  else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+  else if (el.webkitEnterFullscreen) el.webkitEnterFullscreen();
+}
+
 export default function Viewer() {
   const { roomId } = useParams();
   const navigate = useNavigate();
 
   const videoRef = useRef(null);
+  const recVideoRef = useRef(null);
   const pc = useRef(null);
   const mapDivRef = useRef(null);
   const mapRef = useRef(null);
@@ -41,8 +48,9 @@ export default function Viewer() {
   const [motionAlert, setMotionAlert] = useState(false);
   const [isDeafened, setIsDeafened] = useState(false);
   const [needsTap, setNeedsTap] = useState(false);
+  const [playingRec, setPlayingRec] = useState(null);
 
-  // Init Leaflet map once the div is mounted
+  // Init Leaflet map
   useEffect(() => {
     const map = L.map(mapDivRef.current, { zoomControl: true }).setView([20, 0], 2);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -55,11 +63,8 @@ export default function Viewer() {
     return () => map.remove();
   }, []);
 
-  // Invalidate map size when tab switches to map
   useEffect(() => {
-    if (tab === 'map') {
-      setTimeout(() => mapRef.current?.invalidateSize(), 50);
-    }
+    if (tab === 'map') setTimeout(() => mapRef.current?.invalidateSize(), 50);
   }, [tab]);
 
   const updateMap = useCallback((lat, lng) => {
@@ -71,7 +76,6 @@ export default function Viewer() {
     mapRef.current.setView(latlng, Math.max(mapRef.current.getZoom(), 15), { animate: true });
   }, []);
 
-  // Load GPS history into map path on mount
   async function loadGpsHistory() {
     try {
       const res = await fetch(`/api/gps/${roomId}`);
@@ -101,9 +105,7 @@ export default function Viewer() {
     socket.connect();
     socket.emit('join-room', { roomId, role: 'viewer' });
 
-    socket.on('room-joined', ({ hasCamera }) => {
-      setCameraOnline(!!hasCamera);
-    });
+    socket.on('room-joined', ({ hasCamera }) => setCameraOnline(!!hasCamera));
 
     socket.on('camera-disconnected', () => {
       setCameraOnline(false);
@@ -130,9 +132,7 @@ export default function Viewer() {
       };
 
       conn.onconnectionstatechange = () => {
-        if (['disconnected', 'failed'].includes(conn.connectionState)) {
-          setConnected(false);
-        }
+        if (['disconnected', 'failed'].includes(conn.connectionState)) setConnected(false);
       };
 
       await conn.setRemoteDescription(offer);
@@ -142,9 +142,7 @@ export default function Viewer() {
     });
 
     socket.on('webrtc-ice', async ({ candidate }) => {
-      try {
-        await pc.current?.addIceCandidate(candidate);
-      } catch { /* ignore */ }
+      try { await pc.current?.addIceCandidate(candidate); } catch { /* ignore */ }
     });
 
     socket.on('gps-update', ({ lat, lng, accuracy, timestamp }) => {
@@ -188,37 +186,32 @@ export default function Viewer() {
         </div>
       </div>
 
-      {motionAlert && (
-        <div className="motion-alert">
-          Motion detected!
-        </div>
-      )}
+      {motionAlert && <div className="motion-alert">Motion detected!</div>}
 
       {needsTap && (
-        <button
-          className="btn-primary"
-          onClick={() => {
-            videoRef.current?.play();
-            setNeedsTap(false);
-          }}
-        >
+        <button className="btn-primary" onClick={() => { videoRef.current?.play(); setNeedsTap(false); }}>
           Tap to enable audio
         </button>
       )}
 
-      <video ref={videoRef} autoPlay playsInline className="remote-video" />
+      <div style={{ position: 'relative' }}>
+        <video ref={videoRef} autoPlay playsInline className="remote-video" />
+        <button className="fullscreen-btn" onClick={() => requestFullscreen(videoRef.current)} title="Fullscreen">⛶</button>
+      </div>
 
-      <button
-        className={isDeafened ? 'btn-danger' : 'btn-ghost'}
-        onClick={() => {
-          const next = !isDeafened;
-          if (videoRef.current) videoRef.current.muted = next;
-          setIsDeafened(next);
-        }}
-        style={{ width: '100%' }}
-      >
-        {isDeafened ? 'Audio Off — Tap to Unmute' : 'Mute Audio'}
-      </button>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button
+          className={isDeafened ? 'btn-danger' : 'btn-ghost'}
+          onClick={() => {
+            const next = !isDeafened;
+            if (videoRef.current) videoRef.current.muted = next;
+            setIsDeafened(next);
+          }}
+          style={{ flex: 1 }}
+        >
+          {isDeafened ? 'Audio Off — Tap to Unmute' : 'Mute Audio'}
+        </button>
+      </div>
 
       {gps && (
         <div className="gps-info">
@@ -229,42 +222,45 @@ export default function Viewer() {
       )}
 
       <div className="tabs">
-        <button className={`tab-btn${tab === 'map' ? ' active' : ''}`} onClick={() => setTab('map')}>
-          Map
-        </button>
-        <button
-          className={`tab-btn${tab === 'recordings' ? ' active' : ''}`}
-          onClick={() => { setTab('recordings'); loadRecordings(); }}
-        >
-          Recordings
-        </button>
-        <button
-          className={`tab-btn${tab === 'gps' ? ' active' : ''}`}
-          onClick={() => setTab('gps')}
-        >
-          GPS Log
-        </button>
+        <button className={`tab-btn${tab === 'map' ? ' active' : ''}`} onClick={() => setTab('map')}>Map</button>
+        <button className={`tab-btn${tab === 'recordings' ? ' active' : ''}`} onClick={() => { setTab('recordings'); loadRecordings(); }}>Recordings</button>
+        <button className={`tab-btn${tab === 'gps' ? ' active' : ''}`} onClick={() => setTab('gps')}>GPS Log</button>
       </div>
 
-      {/* Map always rendered so Leaflet keeps its state; hidden via CSS */}
-      <div
-        ref={mapDivRef}
-        className={`map-container${tab !== 'map' ? ' hidden' : ''}`}
-      />
+      <div ref={mapDivRef} className={`map-container${tab !== 'map' ? ' hidden' : ''}`} />
 
       {tab === 'recordings' && (
         <div className="recordings-list">
+          {playingRec && (
+            <div className="recording-player">
+              <div className="recording-player-header">
+                <span>{new Date(Number(playingRec.timestamp)).toLocaleString()}</span>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button className="btn-ghost btn-sm" onClick={() => requestFullscreen(recVideoRef.current)}>⛶</button>
+                  <button className="btn-ghost btn-sm" onClick={() => setPlayingRec(null)}>Close</button>
+                </div>
+              </div>
+              <video
+                ref={recVideoRef}
+                src={`/api/recordings/file/${playingRec.filename}`}
+                controls
+                playsInline
+                autoPlay
+                className="recording-video"
+              />
+            </div>
+          )}
           {loadingRec ? (
             <p className="empty-state">Loading...</p>
           ) : recordings.length === 0 ? (
             <p className="empty-state">No recordings yet. Recordings appear every 5 minutes while the camera is active.</p>
           ) : (
             recordings.map((rec) => (
-              <div key={rec.id} className="recording-item">
+              <div key={rec.id} className={`recording-item${playingRec?.id === rec.id ? ' active' : ''}`}>
                 <span>{new Date(Number(rec.timestamp)).toLocaleString()}</span>
-                <a href={`/api/recordings/file/${rec.filename}`} target="_blank" rel="noreferrer">
-                  Play
-                </a>
+                <button className="btn-ghost btn-sm" onClick={() => setPlayingRec(playingRec?.id === rec.id ? null : rec)}>
+                  {playingRec?.id === rec.id ? 'Close' : 'Play'}
+                </button>
               </div>
             ))
           )}

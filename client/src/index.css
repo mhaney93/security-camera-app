@@ -270,6 +270,48 @@ input[type="text"]::placeholder { letter-spacing: 0; color: var(--muted); }
   font-size: 0.9rem;
 }
 
+/* --- Fullscreen button --- */
+.fullscreen-btn {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  background: rgba(0,0,0,0.55);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  line-height: 1;
+}
+.fullscreen-btn:active { opacity: 0.7; }
+
+/* --- Inline recording player --- */
+.recording-player {
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+.recording-player-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.recording-video {
+  width: 100%;
+  display: block;
+  background: #000;
+  max-height: 40vh;
+}
+.recording-item.active {
+  border-color: var(--accent);
+}
+
 /* --- Motion detection --- */
 .badge-motion { background: #ff6d0022; color: #ff6d00; animation: pulse 1s infinite; }
 

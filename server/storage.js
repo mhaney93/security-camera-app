@@ -36,29 +36,34 @@ async function storeRecording(localPath, key) {
       ContentType: 'video/webm',
     }));
     fs.unlink(localPath, () => {});
-  } else {
-    // Just leave the file where multer already put it (inside uploads/)
-    // If multer wrote to a tmp subdir, move it; here multer writes directly to uploads/ so no-op
   }
+  // Local: multer already wrote to uploads/, nothing to move
 }
 
-// Stream a stored recording into an Express response
-async function streamRecording(key, res) {
+// Stream a stored recording with Range request support (enables seeking)
+async function streamRecording(key, req, res) {
+  const rangeHeader = req.headers.range;
+
   if (USE_R2) {
     const { GetObjectCommand } = require('@aws-sdk/client-s3');
-    const obj = await r2().send(new GetObjectCommand({
+    const params = {
       Bucket: process.env.R2_BUCKET_NAME,
-      Key: key,
-    }));
+      Key: path.basename(key),
+    };
+    if (rangeHeader) params.Range = rangeHeader;
+
+    const obj = await r2().send(new GetObjectCommand(params));
     res.setHeader('Content-Type', obj.ContentType || 'video/webm');
+    res.setHeader('Accept-Ranges', 'bytes');
     if (obj.ContentLength) res.setHeader('Content-Length', String(obj.ContentLength));
+    if (obj.ContentRange) res.setHeader('Content-Range', obj.ContentRange);
+    res.status(rangeHeader ? 206 : 200);
     obj.Body.pipe(res);
   } else {
     const file = path.join(uploadsDir, path.basename(key));
     if (!fs.existsSync(file)) throw new Error('Not found');
-    res.setHeader('Content-Type', 'video/webm');
-    res.setHeader('Accept-Ranges', 'bytes');
-    fs.createReadStream(file).pipe(res);
+    // res.sendFile handles Range requests automatically
+    res.sendFile(file);
   }
 }
 

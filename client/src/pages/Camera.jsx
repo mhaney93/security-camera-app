@@ -264,6 +264,14 @@ export default function Camera() {
     }
   }, [motionEnabled, status, startMotionDetection]);
 
+  function enterFullscreen() {
+    const el = videoRef.current;
+    if (!el) return;
+    if (el.requestFullscreen) el.requestFullscreen();
+    else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+    else if (el.webkitEnterFullscreen) el.webkitEnterFullscreen();
+  }
+
   function toggleMute() {
     const audioTracks = localStream.current?.getAudioTracks() ?? [];
     const next = !isMuted;
@@ -294,13 +302,16 @@ export default function Camera() {
         </div>
       </div>
 
-      <video
-        ref={videoRef}
-        autoPlay
-        muted
-        playsInline
-        className={`preview-video${usingBack ? ' back' : ''}`}
-      />
+      <div style={{ position: 'relative' }}>
+        <video
+          ref={videoRef}
+          autoPlay
+          muted
+          playsInline
+          className={`preview-video${usingBack ? ' back' : ''}`}
+        />
+        <button className="fullscreen-btn" onClick={enterFullscreen} title="Fullscreen">⛶</button>
+      </div>
 
       {/* Hidden canvas used for motion detection frame comparison */}
       <canvas ref={canvasRef} style={{ display: 'none' }} />
