@@ -46,8 +46,7 @@ export default function Viewer() {
   const [tab, setTab] = useState('map');
   const [loadingRec, setLoadingRec] = useState(false);
   const [motionAlert, setMotionAlert] = useState(false);
-  const [isDeafened, setIsDeafened] = useState(false);
-  const [needsTap, setNeedsTap] = useState(false);
+  const [isDeafened, setIsDeafened] = useState(true);
   const [playingRec, setPlayingRec] = useState(null);
 
   // Init Leaflet map
@@ -122,7 +121,8 @@ export default function Viewer() {
       conn.ontrack = ({ streams }) => {
         if (videoRef.current) {
           videoRef.current.srcObject = streams[0];
-          videoRef.current.play().catch(() => setNeedsTap(true));
+          videoRef.current.muted = true;
+          videoRef.current.play().catch(() => {});
         }
         setConnected(true);
       };
@@ -192,19 +192,14 @@ export default function Viewer() {
         <video ref={videoRef} autoPlay playsInline className="remote-video" />
         <button
           className="video-overlay-btn left"
-          title={needsTap ? 'Tap to enable audio' : isDeafened ? 'Unmute audio' : 'Mute audio'}
+          title={isDeafened ? 'Unmute audio' : 'Mute audio'}
           onClick={() => {
-            if (needsTap) {
-              videoRef.current?.play();
-              setNeedsTap(false);
-              return;
-            }
             const next = !isDeafened;
             if (videoRef.current) videoRef.current.muted = next;
             setIsDeafened(next);
           }}
         >
-          {needsTap ? '▶🔊' : isDeafened ? '🔇' : '🔊'}
+          {isDeafened ? '🔇' : '🔊'}
         </button>
         <button className="video-overlay-btn right" onClick={() => requestFullscreen(videoRef.current)} title="Fullscreen">⛶</button>
       </div>
