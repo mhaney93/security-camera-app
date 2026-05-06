@@ -87,7 +87,8 @@ button:active { opacity: 0.8; }
 }
 
 /* --- Input --- */
-input[type="text"] {
+input[type="text"],
+input[type="password"] {
   background: var(--surface2);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -95,12 +96,17 @@ input[type="text"] {
   font-size: 1.1rem;
   color: var(--text);
   width: 100%;
-  letter-spacing: 3px;
-  text-transform: uppercase;
   outline: none;
 }
-input[type="text"]:focus { border-color: var(--accent); }
-input[type="text"]::placeholder { letter-spacing: 0; color: var(--muted); }
+input[type="text"]:focus,
+input[type="password"]:focus { border-color: var(--accent); }
+input[type="text"]::placeholder,
+input[type="password"]::placeholder { letter-spacing: 0; color: var(--muted); }
+
+input[type="text"].code-input {
+  letter-spacing: 3px;
+  text-transform: uppercase;
+}
 
 /* --- Status badges --- */
 .badge {

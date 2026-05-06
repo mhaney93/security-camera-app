@@ -37,6 +37,7 @@ export default function Home() {
         <p>Turn this device into a live security camera. Share the room code with a viewer.</p>
         <input
           type="text"
+          className="code-input"
           placeholder="Custom code (optional — leave blank for random)"
           value={cameraCode}
           maxLength={10}
@@ -53,6 +54,7 @@ export default function Home() {
         <p>Watch a camera stream remotely. Enter the room code from the camera device.</p>
         <input
           type="text"
+          className="code-input"
           placeholder="Room code"
           value={viewerCode}
           maxLength={10}
