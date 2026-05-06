@@ -7,15 +7,17 @@ function generateCode() {
 
 export default function Home() {
   const navigate = useNavigate();
-  const [code, setCode] = useState('');
+  const [viewerCode, setViewerCode] = useState('');
+  const [cameraCode, setCameraCode] = useState('');
   const [error, setError] = useState('');
 
   function createCamera() {
-    navigate(`/camera/${generateCode()}`);
+    const trimmed = cameraCode.trim().toUpperCase();
+    navigate(`/camera/${trimmed.length >= 4 ? trimmed : generateCode()}`);
   }
 
   function joinViewer() {
-    const trimmed = code.trim().toUpperCase();
+    const trimmed = viewerCode.trim().toUpperCase();
     if (trimmed.length < 4) {
       setError('Enter at least 4 characters');
       return;
@@ -33,6 +35,14 @@ export default function Home() {
       <div className="card">
         <h2>Start Camera</h2>
         <p>Turn this device into a live security camera. Share the room code with a viewer.</p>
+        <input
+          type="text"
+          placeholder="Custom code (optional — leave blank for random)"
+          value={cameraCode}
+          maxLength={10}
+          onChange={(e) => setCameraCode(e.target.value.toUpperCase())}
+          onKeyDown={(e) => e.key === 'Enter' && createCamera()}
+        />
         <button className="btn-primary" onClick={createCamera}>
           Create Camera Room
         </button>
@@ -44,10 +54,10 @@ export default function Home() {
         <input
           type="text"
           placeholder="Room code"
-          value={code}
+          value={viewerCode}
           maxLength={10}
           onChange={(e) => {
-            setCode(e.target.value.toUpperCase());
+            setViewerCode(e.target.value.toUpperCase());
             setError('');
           }}
           onKeyDown={(e) => e.key === 'Enter' && joinViewer()}
