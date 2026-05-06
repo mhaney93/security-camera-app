@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { socket } from '../socket';
+import { socket, apiFetch } from '../socket';
 
 const ICE_CONFIG = {
   iceServers: [
@@ -69,7 +69,7 @@ export default function Camera() {
       if (lat != null) form.append('lat', String(lat));
       if (lng != null) form.append('lng', String(lng));
       try {
-        await fetch(`/api/upload/${roomId}`, { method: 'POST', body: form });
+        await apiFetch(`/api/upload/${roomId}`, { method: 'POST', body: form });
       } catch {
         // silently ignore upload failures — will retry on next chunk
       }

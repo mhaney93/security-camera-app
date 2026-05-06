@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { socket } from '../socket';
+import { socket, apiFetch } from '../socket';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -77,7 +77,7 @@ export default function Viewer() {
 
   async function loadGpsHistory() {
     try {
-      const res = await fetch(`/api/gps/${roomId}`);
+      const res = await apiFetch(`/api/gps/${roomId}`);
       const data = await res.json();
       setGpsHistory(data);
       if (data.length > 0 && mapRef.current) {
@@ -94,7 +94,7 @@ export default function Viewer() {
   async function loadRecordings() {
     setLoadingRec(true);
     try {
-      const res = await fetch(`/api/recordings/${roomId}`);
+      const res = await apiFetch(`/api/recordings/${roomId}`);
       setRecordings(await res.json());
     } catch { /* ignore */ }
     setLoadingRec(false);

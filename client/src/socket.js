@@ -1,7 +1,16 @@
 import { io } from 'socket.io-client';
 
-// In dev, Vite proxy forwards /socket.io to localhost:3001.
-// In production, server and client share the same origin.
 const URL = import.meta.env.DEV ? 'http://localhost:3001' : window.location.origin;
 
-export const socket = io(URL, { autoConnect: false });
+export const socket = io(URL, {
+  autoConnect: false,
+  auth: (cb) => cb({ secret: sessionStorage.getItem('app_secret') ?? '' }),
+});
+
+export function apiFetch(url, options = {}) {
+  const secret = sessionStorage.getItem('app_secret') ?? '';
+  return fetch(url, {
+    ...options,
+    headers: { 'x-app-secret': secret, ...(options.headers ?? {}) },
+  });
+}

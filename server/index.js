@@ -21,6 +21,22 @@ const io = new Server(httpServer, {
 app.use(cors());
 app.use(express.json());
 
+const APP_SECRET = process.env.APP_SECRET;
+
+// Guard all /api routes when APP_SECRET is set
+app.use('/api', (req, res, next) => {
+  if (!APP_SECRET) return next();
+  if (req.headers['x-app-secret'] === APP_SECRET) return next();
+  res.status(401).json({ error: 'Unauthorized' });
+});
+
+// Guard socket connections when APP_SECRET is set
+io.use((socket, next) => {
+  if (!APP_SECRET) return next();
+  if (socket.handshake.auth?.secret === APP_SECRET) return next();
+  next(new Error('Unauthorized'));
+});
+
 // Multer saves to uploads/ first; storeRecording() then forwards to R2 if configured
 const upload = multer({
   storage: multer.diskStorage({
