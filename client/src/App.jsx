@@ -7,6 +7,7 @@ import Viewer from './pages/Viewer';
 function Lock({ onUnlock }) {
   const [value, setValue] = useState('');
   const [error, setError] = useState('');
+  const [show, setShow] = useState(false);
 
   function submit() {
     if (!value.trim()) { setError('Enter the app password'); return; }
@@ -19,15 +20,25 @@ function Lock({ onUnlock }) {
       <div className="card" style={{ width: '100%', maxWidth: 360 }}>
         <h2>SecureCam</h2>
         <p>Enter the app password to continue.</p>
-        <input
-          type="password"
-          placeholder="Password"
-          value={value}
-          style={{ letterSpacing: 0 }}
-          onChange={(e) => { setValue(e.target.value); setError(''); }}
-          onKeyDown={(e) => e.key === 'Enter' && submit()}
-          autoFocus
-        />
+        <div style={{ position: 'relative' }}>
+          <input
+            type={show ? 'text' : 'password'}
+            placeholder="Password"
+            value={value}
+            style={{ letterSpacing: 0, paddingRight: 44 }}
+            onChange={(e) => { setValue(e.target.value); setError(''); }}
+            onKeyDown={(e) => e.key === 'Enter' && submit()}
+            autoFocus
+          />
+          <button
+            type="button"
+            onClick={() => setShow((s) => !s)}
+            style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', padding: '4px', fontSize: '1.1rem', color: 'var(--muted)' }}
+            tabIndex={-1}
+          >
+            {show ? '🙈' : '👁'}
+          </button>
+        </div>
         {error && <p style={{ color: 'var(--danger)', fontSize: '0.85rem' }}>{error}</p>}
         <button className="btn-primary" onClick={submit}>Unlock</button>
       </div>
