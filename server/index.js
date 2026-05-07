@@ -127,7 +127,7 @@ async function sendMotionNotification(roomId) {
         'Tags': 'rotating_light',
         'Content-Type': 'text/plain',
       },
-      body: `Motion detected in room ${roomId} at ${new Date().toLocaleString()}`,
+      body: `Motion detected in room ${roomId}`,
     });
   } catch (err) {
     console.error('ntfy notification failed:', err.message);
