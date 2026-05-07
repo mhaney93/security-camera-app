@@ -18,7 +18,7 @@ function Lock({ onUnlock }) {
   return (
     <div className="page" style={{ justifyContent: 'center', alignItems: 'center' }}>
       <div className="card" style={{ width: '100%', maxWidth: 360 }}>
-        <h2>SecureCam</h2>
+        <h2>ACME</h2>
         <p>Enter the app password to continue.</p>
         <div style={{ position: 'relative' }}>
           <input
