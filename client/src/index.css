@@ -269,6 +269,7 @@ input[type="text"].code-input {
   font-family: monospace;
 }
 .gps-point span { color: var(--text); }
+.gps-address { color: var(--accent); margin-top: 4px; font-size: 0.78rem; }
 
 .empty-state {
   text-align: center;

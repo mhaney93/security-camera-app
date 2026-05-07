@@ -37,9 +37,11 @@ export default function Viewer() {
   const markerRef = useRef(null);
   const pathRef = useRef(null);
   const pathCoords = useRef([]);
+  const fetchedAddressKeys = useRef(new Set());
 
   // null = checking, true = exists, false = not found
   const [roomExists, setRoomExists] = useState(null);
+  const [addresses, setAddresses] = useState({});
 
   const [connected, setConnected] = useState(false);
   const [cameraOnline, setCameraOnline] = useState(false);
@@ -77,6 +79,43 @@ export default function Viewer() {
   useEffect(() => {
     if (tab === 'map') setTimeout(() => mapRef.current?.invalidateSize(), 50);
   }, [tab]);
+
+  function formatAddress(addr) {
+    if (!addr) return '';
+    const parts = [
+      addr.road || addr.pedestrian || addr.footway || addr.path,
+      addr.city || addr.town || addr.village || addr.hamlet || addr.suburb,
+      addr.state,
+    ].filter(Boolean);
+    return parts.join(', ');
+  }
+
+  // Fetch addresses for GPS log points when the GPS tab is open
+  useEffect(() => {
+    if (tab !== 'gps' || gpsHistory.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      for (const point of gpsHistory) {
+        if (cancelled) break;
+        const key = `${point.lat},${point.lng}`;
+        if (fetchedAddressKeys.current.has(key)) continue;
+        fetchedAddressKeys.current.add(key);
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?lat=${point.lat}&lon=${point.lng}&format=json`,
+            { headers: { 'User-Agent': 'ACME-SecurityCam/1.0' } }
+          );
+          const data = await res.json();
+          if (!cancelled) {
+            const addr = formatAddress(data.address) || data.display_name || '';
+            setAddresses(prev => ({ ...prev, [key]: addr }));
+          }
+        } catch { /* ignore */ }
+        if (!cancelled) await new Promise(r => setTimeout(r, 1100));
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [tab, gpsHistory]);
 
   const updateMap = useCallback((lat, lng) => {
     if (!mapRef.current) return;
@@ -304,14 +343,21 @@ export default function Viewer() {
           {gpsHistory.length === 0 ? (
             <p className="empty-state">No GPS history for this room yet.</p>
           ) : (
-            gpsHistory.map((p) => (
-              <div key={p.id} className="gps-point">
-                <span>{new Date(Number(p.timestamp)).toLocaleString()}</span>
-                {'  '}
-                {p.lat.toFixed(6)}, {p.lng.toFixed(6)}
-                {p.accuracy ? `  ±${Math.round(p.accuracy)}m` : ''}
-              </div>
-            ))
+            gpsHistory.map((p) => {
+              const key = `${p.lat},${p.lng}`;
+              const address = addresses[key];
+              return (
+                <div key={p.id} className="gps-point">
+                  <span>{new Date(Number(p.timestamp)).toLocaleString()}</span>
+                  {'  '}
+                  {p.lat.toFixed(6)}, {p.lng.toFixed(6)}
+                  {p.accuracy ? `  ±${Math.round(p.accuracy)}m` : ''}
+                  {address !== undefined && (
+                    <div className="gps-address">{address || 'Address unavailable'}</div>
+                  )}
+                </div>
+              );
+            })
           )}
         </div>
       )}
