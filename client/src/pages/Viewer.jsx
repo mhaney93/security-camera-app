@@ -38,6 +38,9 @@ export default function Viewer() {
   const pathRef = useRef(null);
   const pathCoords = useRef([]);
 
+  // null = checking, true = exists, false = not found
+  const [roomExists, setRoomExists] = useState(null);
+
   const [connected, setConnected] = useState(false);
   const [cameraOnline, setCameraOnline] = useState(false);
   const [gps, setGps] = useState(null);
@@ -49,8 +52,17 @@ export default function Viewer() {
   const [isDeafened, setIsDeafened] = useState(true);
   const [playingRec, setPlayingRec] = useState(null);
 
-  // Init Leaflet map
+  // Check if the room exists before doing anything
   useEffect(() => {
+    apiFetch(`/api/rooms/${roomId}/exists`)
+      .then(r => r.json())
+      .then(({ exists }) => setRoomExists(exists))
+      .catch(() => setRoomExists(true)); // fail open on network error
+  }, [roomId]);
+
+  // Init Leaflet map — only once room is confirmed
+  useEffect(() => {
+    if (roomExists !== true) return;
     const map = L.map(mapDivRef.current, { zoomControl: true }).setView([20, 0], 2);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
@@ -60,7 +72,7 @@ export default function Viewer() {
     markerRef.current = L.marker([20, 0], { icon: CAMERA_ICON }).addTo(map);
     pathRef.current = L.polyline([], { color: '#00e676', weight: 3, opacity: 0.7 }).addTo(map);
     return () => map.remove();
-  }, []);
+  }, [roomExists]);
 
   useEffect(() => {
     if (tab === 'map') setTimeout(() => mapRef.current?.invalidateSize(), 50);
@@ -100,7 +112,10 @@ export default function Viewer() {
     setLoadingRec(false);
   }
 
+  // Socket connection — only once room is confirmed
   useEffect(() => {
+    if (roomExists !== true) return;
+
     socket.connect();
     socket.emit('join-room', { roomId, role: 'viewer' });
 
@@ -168,7 +183,28 @@ export default function Viewer() {
       socket.off('motion-detected');
       socket.disconnect();
     };
-  }, [roomId, updateMap]);
+  }, [roomId, updateMap, roomExists]);
+
+  if (roomExists === null) {
+    return (
+      <div className="page" style={{ justifyContent: 'center', alignItems: 'center' }}>
+        <p style={{ color: 'var(--muted)' }}>Checking room...</p>
+      </div>
+    );
+  }
+
+  if (roomExists === false) {
+    return (
+      <div className="page" style={{ justifyContent: 'center', alignItems: 'center' }}>
+        <div className="card" style={{ maxWidth: 360, width: '100%', textAlign: 'center', gap: 16 }}>
+          <div style={{ fontSize: '2.5rem' }}>📷</div>
+          <h2 style={{ color: 'var(--danger)' }}>Room not found</h2>
+          <p>That room doesn't exist. Double-check the room code and try again.</p>
+          <button className="btn-primary" onClick={() => navigate('/')}>Go Back</button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="page">

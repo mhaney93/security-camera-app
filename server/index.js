@@ -86,6 +86,17 @@ app.get('/api/gps/:roomId', async (req, res) => {
   }
 });
 
+app.get('/api/rooms/:roomId/exists', async (req, res) => {
+  const { roomId } = req.params;
+  if (rooms.get(roomId)?.cameraId) return res.json({ exists: true });
+  try {
+    const [recs, gps] = await Promise.all([getRecordings(roomId), getGpsHistory(roomId)]);
+    res.json({ exists: recs.length > 0 || gps.length > 0 });
+  } catch {
+    res.json({ exists: false });
+  }
+});
+
 // Serve built client in production
 const clientDist = path.join(__dirname, '..', 'client', 'dist');
 if (fs.existsSync(clientDist)) {
