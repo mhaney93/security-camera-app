@@ -53,14 +53,14 @@ export default function Camera() {
   const wakeLockRef = useRef(null);
   const audioCtxRef = useRef(null);
   // Mirror of isMuted state for use inside async closures without dep-array churn
-  const isMutedRef = useRef(false);
+  const isMutedRef = useRef(true);
 
   const [status, setStatus] = useState('Starting...');
   const [viewerCount, setViewerCount] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
   const [motionActive, setMotionActive] = useState(false);
   const [motionEnabled, setMotionEnabled] = useState(true);
-  const [isMuted, setIsMuted] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
   const [gps, setGps] = useState(null);
   const [copied, setCopied] = useState(false);
   const [usingBack, setUsingBack] = useState(true);
@@ -260,6 +260,7 @@ export default function Camera() {
       }
 
       localStream.current = stream;
+      stream.getAudioTracks().forEach(t => { t.enabled = false; });
       if (videoRef.current) videoRef.current.srcObject = stream;
 
       // Prevent the browser from suspending this tab in the background.
