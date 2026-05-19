@@ -50,6 +50,10 @@ export default function Camera() {
   const gpsWatcher = useRef(null);
   const gpsRef = useRef(null);
   const isMounted = useRef(true);
+  const wakeLockRef = useRef(null);
+  const audioCtxRef = useRef(null);
+  // Mirror of isMuted state for use inside async closures without dep-array churn
+  const isMutedRef = useRef(false);
 
   const [status, setStatus] = useState('Starting...');
   const [viewerCount, setViewerCount] = useState(0);
@@ -60,6 +64,14 @@ export default function Camera() {
   const [gps, setGps] = useState(null);
   const [copied, setCopied] = useState(false);
   const [usingBack, setUsingBack] = useState(true);
+
+  const requestWakeLock = useCallback(async () => {
+    if (!('wakeLock' in navigator)) return;
+    try {
+      wakeLockRef.current?.release();
+      wakeLockRef.current = await navigator.wakeLock.request('screen');
+    } catch { /* unsupported or permission denied */ }
+  }, []);
 
   const uploadChunk = useCallback(
     async (blob, lat, lng) => {
@@ -92,6 +104,13 @@ export default function Camera() {
         const blob = new Blob(chunks, { type: rec.mimeType || 'video/webm' });
         chunks.length = 0;
         uploadChunk(blob, startGps?.lat, startGps?.lng);
+      };
+
+      rec.onerror = () => {
+        clearInterval(recInterval.current);
+        setTimeout(() => {
+          if (isMounted.current) startRecording(stream);
+        }, 500);
       };
 
       rec.start();
@@ -167,6 +186,64 @@ export default function Camera() {
     return pc;
   }, []);
 
+  // When returning from background or lock screen, re-acquire the camera if the OS killed it
+  // and restart recording if the MediaRecorder was paused. Also re-requests the wake lock,
+  // which is automatically released by the browser when the page is hidden.
+  useEffect(() => {
+    async function handleVisible() {
+      if (document.hidden || !isMounted.current || !localStream.current) return;
+
+      requestWakeLock();
+
+      const tracksAlive = localStream.current.getTracks().every(t => t.readyState === 'live');
+
+      if (!tracksAlive) {
+        // iOS kills the camera stream on lock/app-switch — re-acquire it
+        let newStream;
+        try {
+          newStream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: usingBack ? 'environment' : 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
+            audio: true,
+          });
+        } catch { return; }
+
+        if (isMutedRef.current) {
+          newStream.getAudioTracks().forEach(t => { t.enabled = false; });
+        }
+
+        // Swap tracks into existing peer connections without full renegotiation
+        const newTracks = newStream.getTracks();
+        Object.values(peers.current).forEach(pc => {
+          pc.getSenders().forEach(sender => {
+            const replacement = newTracks.find(t => t.kind === sender.track?.kind);
+            if (replacement) sender.replaceTrack(replacement);
+          });
+        });
+
+        localStream.current.getTracks().forEach(t => t.stop());
+        localStream.current = newStream;
+        if (videoRef.current) videoRef.current.srcObject = newStream;
+
+        clearTimeout(motionTimer.current);
+        clearInterval(recInterval.current);
+        if (recorder.current?.state === 'recording') recorder.current.stop();
+
+        setTimeout(() => {
+          if (!isMounted.current) return;
+          startRecording(newStream);
+          if (motionEnabled) startMotionDetection(videoRef.current);
+        }, 500);
+      } else if (recorder.current?.state !== 'recording') {
+        // Stream is still alive but the recorder was paused — restart it
+        clearInterval(recInterval.current);
+        startRecording(localStream.current);
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisible);
+    return () => document.removeEventListener('visibilitychange', handleVisible);
+  }, [usingBack, motionEnabled, requestWakeLock, startRecording, startMotionDetection]);
+
   useEffect(() => {
     isMounted.current = true;
 
@@ -184,6 +261,25 @@ export default function Camera() {
 
       localStream.current = stream;
       if (videoRef.current) videoRef.current.srcObject = stream;
+
+      // Prevent the browser from suspending this tab in the background.
+      // Wake lock keeps the screen on (auto-lock); the silent audio loop keeps
+      // the browser process alive on Android when the user switches apps.
+      requestWakeLock();
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        gain.gain.value = 0.001; // inaudible but non-zero so the stream isn't optimised away
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        audioCtxRef.current = ctx;
+        // iOS requires a user gesture before audio can play; resume on first touch
+        if (ctx.state === 'suspended') {
+          document.addEventListener('touchstart', () => ctx.resume(), { once: true });
+        }
+      } catch { /* silent audio keep-alive not supported on this device */ }
 
       socket.connect();
       socket.emit('join-room', { roomId, role: 'camera' });
@@ -255,8 +351,13 @@ export default function Camera() {
       socket.off('webrtc-answer');
       socket.off('webrtc-ice');
       socket.disconnect();
+      wakeLockRef.current?.release();
+      if (audioCtxRef.current) {
+        audioCtxRef.current.close();
+        audioCtxRef.current = null;
+      }
     };
-  }, [roomId, usingBack, createPeerConnection, startRecording, startMotionDetection]);
+  }, [roomId, usingBack, createPeerConnection, startRecording, startMotionDetection, requestWakeLock]);
 
   // Pause/resume motion detection when toggled without restarting the stream
   useEffect(() => {
@@ -282,6 +383,7 @@ export default function Camera() {
     const audioTracks = localStream.current?.getAudioTracks() ?? [];
     const next = !isMuted;
     audioTracks.forEach((t) => { t.enabled = !next; });
+    isMutedRef.current = next;
     setIsMuted(next);
   }
 
@@ -374,7 +476,7 @@ export default function Camera() {
       </button>
 
       <p style={{ color: 'var(--muted)', fontSize: '0.8rem', textAlign: 'center' }}>
-        Keep this page open. Screen lock may pause streaming on some devices.
+        Recording continues in the background. On iOS, locking the screen may briefly pause the camera — it will resume automatically when you return.
       </p>
     </div>
   );
