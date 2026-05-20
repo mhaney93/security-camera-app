@@ -27,6 +27,7 @@ const APP_SECRET = process.env.APP_SECRET;
 app.use('/api', (req, res, next) => {
   if (!APP_SECRET) return next();
   if (req.headers['x-app-secret'] === APP_SECRET) return next();
+  if (req.query.secret === APP_SECRET) return next();
   res.status(401).json({ error: 'Unauthorized' });
 });
 
