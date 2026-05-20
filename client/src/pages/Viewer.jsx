@@ -306,7 +306,7 @@ export default function Viewer() {
               <div style={{ position: 'relative' }}>
                 <video
                   ref={recVideoRef}
-                  src={`/api/recordings/file/${playingRec.filename}`}
+                  src={`/api/recordings/file/${playingRec.filename}?secret=${encodeURIComponent(sessionStorage.getItem('app_secret') ?? '')}`}
                   controls
                   playsInline
                   autoPlay

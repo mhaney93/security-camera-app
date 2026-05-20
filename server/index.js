@@ -95,6 +95,19 @@ app.get('/privacy', (_req, res) => {
 </html>`);
 });
 
+// Recordings file streaming — uses query param secret because browsers can't
+// send custom headers for <video src> requests.
+app.get('/api/recordings/file/:key', async (req, res) => {
+  if (APP_SECRET && req.query.secret !== APP_SECRET && req.headers['x-app-secret'] !== APP_SECRET) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  try {
+    await streamRecording(path.basename(req.params.key), req, res);
+  } catch {
+    res.status(404).json({ error: 'Not found' });
+  }
+});
+
 // --- REST API ---
 
 app.post('/api/upload/:roomId', upload.single('chunk'), async (req, res) => {
@@ -119,13 +132,7 @@ app.get('/api/recordings/:roomId', async (req, res) => {
   }
 });
 
-app.get('/api/recordings/file/:key', async (req, res) => {
-  try {
-    await streamRecording(path.basename(req.params.key), req, res);
-  } catch {
-    res.status(404).json({ error: 'Not found' });
-  }
-});
+
 
 app.get('/api/gps/:roomId', async (req, res) => {
   try {
