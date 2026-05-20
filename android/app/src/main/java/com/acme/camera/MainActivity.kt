@@ -1,4 +1,4 @@
-package com.acmecamera
+package com.acme.camera
 
 import android.os.Build
 import android.os.Bundle
