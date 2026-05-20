@@ -22,5 +22,8 @@
     "react-native-webrtc": "^124.0.7",
     "socket.io-client": "^4.8.3"
   },
-  "private": true
+  "private": true,
+  "devDependencies": {
+    "sharp": "^0.34.5"
+  }
 }

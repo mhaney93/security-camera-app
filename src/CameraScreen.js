@@ -160,17 +160,24 @@ export default function CameraScreen({ session, onStop }) {
       // Prevent screen from auto-locking
       await activateKeepAwakeAsync();
 
-      // WebRTC: get camera stream for live viewing
+      // WebRTC: try full video+audio stream first; if the camera is already held by
+      // VisionCamera (common on many devices), fall back to audio-only so at least
+      // live audio reaches viewers while VisionCamera handles video recording.
       try {
         const stream = await mediaDevices.getUserMedia({
           video: { facingMode: usingBackRef.current ? 'environment' : 'user', width: 1280, height: 720 },
           audio: true,
         });
-        stream.getAudioTracks().forEach(t => { t.enabled = false; }); // start muted
+        stream.getAudioTracks().forEach(t => { t.enabled = false; });
         localStreamRef.current = stream;
       } catch {
-        // Device may not allow simultaneous camera sessions — WebRTC streaming disabled
-        // VisionCamera recording still works independently
+        try {
+          const audioOnly = await mediaDevices.getUserMedia({ video: false, audio: true });
+          audioOnly.getAudioTracks().forEach(t => { t.enabled = false; });
+          localStreamRef.current = audioOnly;
+        } catch {
+          // No WebRTC stream available — recording still works via VisionCamera
+        }
       }
 
       // Socket + signaling
@@ -262,10 +269,10 @@ export default function CameraScreen({ session, onStop }) {
     setUsingBack(next);
   }
 
-  if (!device) {
+  if (!hasCamPerm || !device) {
     return (
       <SafeAreaView style={styles.safe}>
-        <Text style={styles.errorText}>{status === 'Starting...' ? 'Loading camera...' : status}</Text>
+        <Text style={styles.errorText}>{status}</Text>
       </SafeAreaView>
     );
   }

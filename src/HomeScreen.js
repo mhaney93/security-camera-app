@@ -5,6 +5,10 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+function generateCode() {
+  return Math.random().toString(36).substring(2, 8).toUpperCase();
+}
+
 const KEYS = { serverUrl: 'serverUrl', appSecret: 'appSecret' };
 
 export default function HomeScreen({ onStart }) {
@@ -22,13 +26,13 @@ export default function HomeScreen({ onStart }) {
   function handleStart() {
     const url = serverUrl.trim().replace(/\/$/, '');
     const secret = appSecret.trim();
-    const code = roomCode.trim().toUpperCase();
-    if (!url || !secret || !code) return;
+    const code = roomCode.trim().toUpperCase() || generateCode();
+    if (!url || !secret) return;
     AsyncStorage.multiSet([[KEYS.serverUrl, url], [KEYS.appSecret, secret]]);
     onStart({ serverUrl: url, appSecret: secret, roomCode: code });
   }
 
-  const ready = serverUrl.trim() && appSecret.trim() && roomCode.trim();
+  const ready = serverUrl.trim() && appSecret.trim();
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -62,12 +66,12 @@ export default function HomeScreen({ onStart }) {
               autoCorrect={false}
             />
 
-            <Text style={styles.label}>Room Code</Text>
+            <Text style={styles.label}>Room Code <Text style={styles.labelOptional}>(optional — leave blank for random)</Text></Text>
             <TextInput
               style={[styles.input, styles.codeInput]}
               value={roomCode}
               onChangeText={(t) => setRoomCode(t.toUpperCase())}
-              placeholder="ENTER CODE"
+              placeholder="AUTO-GENERATED"
               placeholderTextColor="#555"
               autoCapitalize="characters"
               autoCorrect={false}
@@ -104,6 +108,7 @@ const styles = StyleSheet.create({
     borderRadius: 10, padding: 20, gap: 10, marginTop: 8,
   },
   label: { fontSize: 13, color: '#888', fontWeight: '500' },
+  labelOptional: { fontSize: 12, color: '#555', fontWeight: '400' },
   input: {
     backgroundColor: '#222', borderWidth: 1, borderColor: '#333',
     borderRadius: 10, padding: 14, fontSize: 16, color: '#f0f0f0',
