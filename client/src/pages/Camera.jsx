@@ -64,6 +64,7 @@ export default function Camera() {
   const [gps, setGps] = useState(null);
   const [copied, setCopied] = useState(false);
   const [usingBack, setUsingBack] = useState(true);
+  const [showSettings, setShowSettings] = useState(false);
 
   const requestWakeLock = useCallback(async () => {
     if (!('wakeLock' in navigator)) return;
@@ -408,6 +409,9 @@ export default function Camera() {
           <button className="btn-ghost btn-sm" onClick={() => setUsingBack((b) => !b)}>
             Flip
           </button>
+          <button className="btn-ghost btn-sm" onClick={() => setShowSettings((s) => !s)}>
+            ⚙
+          </button>
         </div>
       </div>
 
@@ -419,9 +423,6 @@ export default function Camera() {
           playsInline
           className={`preview-video${usingBack ? ' back' : ''}`}
         />
-        <button className="video-overlay-btn left" onClick={toggleMute} title={isMuted ? 'Unmute mic' : 'Mute mic'}>
-          {isMuted ? '🔇' : '🎙'}
-        </button>
         <button className="video-overlay-btn right" onClick={enterFullscreen} title="Fullscreen">⛶</button>
       </div>
 
@@ -446,6 +447,20 @@ export default function Camera() {
           {viewerCount} viewer{viewerCount !== 1 ? 's' : ''}
         </span>
       </div>
+
+      {showSettings && (
+        <div className="card">
+          <h2>Settings</h2>
+          <label className="toggle-label">
+            <input
+              type="checkbox"
+              checked={!isMuted}
+              onChange={toggleMute}
+            />
+            Microphone {isMuted ? 'off' : 'on'}
+          </label>
+        </div>
+      )}
 
       {gps ? (
         <div className="gps-info">
