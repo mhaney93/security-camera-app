@@ -46,6 +46,55 @@ const upload = multer({
   limits: { fileSize: 300 * 1024 * 1024 },
 });
 
+// --- Privacy Policy ---
+app.get('/privacy', (_req, res) => {
+  res.setHeader('Content-Type', 'text/html');
+  res.send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy – ACME Camera</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; max-width: 680px; margin: 40px auto; padding: 0 20px; color: #222; line-height: 1.6; }
+    h1 { font-size: 1.6rem; } h2 { font-size: 1.1rem; margin-top: 2rem; }
+    p, li { font-size: 0.97rem; } ul { padding-left: 1.4rem; }
+    a { color: #0066cc; }
+  </style>
+</head>
+<body>
+  <h1>Privacy Policy</h1>
+  <p><strong>ACME Camera</strong> &mdash; Last updated: May 20, 2026</p>
+
+  <h2>What we collect</h2>
+  <ul>
+    <li><strong>Camera &amp; microphone</strong>: video and audio are streamed and optionally recorded while the app is in use. Recordings are stored on the server you connect to and are deleted automatically after 48 hours.</li>
+    <li><strong>Location</strong>: GPS coordinates are logged while the camera is active, stored on the server, and deleted automatically after 7 days. Location is never shared with third parties.</li>
+  </ul>
+
+  <h2>What we do not collect</h2>
+  <ul>
+    <li>We do not collect your name, email address, or any account information.</li>
+    <li>We do not use analytics, advertising, or tracking SDKs.</li>
+    <li>We do not sell or share your data with any third party.</li>
+  </ul>
+
+  <h2>Data storage</h2>
+  <p>Recordings and GPS logs are stored on a private server. All data is transmitted over HTTPS. Recordings are automatically deleted after 48 hours; GPS logs after 7 days.</p>
+
+  <h2>Permissions</h2>
+  <ul>
+    <li><strong>Camera</strong>: required to capture and stream video.</li>
+    <li><strong>Microphone</strong>: required to capture and stream audio alongside video.</li>
+    <li><strong>Location</strong>: used to tag recordings with GPS coordinates.</li>
+  </ul>
+
+  <h2>Contact</h2>
+  <p>Questions? Email <a href="mailto:matthew.haney1993@gmail.com">matthew.haney1993@gmail.com</a></p>
+</body>
+</html>`);
+});
+
 // --- REST API ---
 
 app.post('/api/upload/:roomId', upload.single('chunk'), async (req, res) => {
