@@ -1,4 +1,5 @@
 node_modules/
+acme-camera/
 server/node_modules/
 client/node_modules/
 client/dist/
