@@ -1,7 +1,42 @@
 {
   "permissions": {
     "allow": [
-      "PowerShell(Stop-Process *)"
+      "PowerShell(Stop-Process *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(git -C \"C:\\\\Users\\\\matth\\\\OneDrive\\\\Desktop\\\\Programming\\\\security_camera_app\" add client/src/App.jsx)",
+      "Bash(git -C \"C:\\\\Users\\\\matth\\\\OneDrive\\\\Desktop\\\\Programming\\\\security_camera_app\" commit -m \"Rename SecureCam to ACME on main lock screen heading\")",
+      "Bash(git -C \"C:\\\\Users\\\\matth\\\\OneDrive\\\\Desktop\\\\Programming\\\\security_camera_app\" push)",
+      "Bash(git -C \"C:\\\\Users\\\\matth\\\\OneDrive\\\\Desktop\\\\Programming\\\\security_camera_app\" add server/index.js client/src/pages/Viewer.jsx)",
+      "Bash(git -C 'C:\\\\Users\\\\matth\\\\OneDrive\\\\Desktop\\\\Programming\\\\security_camera_app' commit -m 'Show error card when viewing a non-existent room code *)",
+      "Bash(git -C \"C:\\\\Users\\\\matth\\\\OneDrive\\\\Desktop\\\\Programming\\\\security_camera_app\" add client/src/pages/Home.jsx)",
+      "Bash(git -C 'C:\\\\Users\\\\matth\\\\OneDrive\\\\Desktop\\\\Programming\\\\security_camera_app' commit -m 'Rename SecureCam to ACME on home page heading *)",
+      "Bash(git -C \"C:\\\\Users\\\\matth\\\\OneDrive\\\\Desktop\\\\Programming\\\\security_camera_app\" add server/index.js)",
+      "Bash(git -C 'C:\\\\Users\\\\matth\\\\OneDrive\\\\Desktop\\\\Programming\\\\security_camera_app' commit -m 'Remove server-side timestamp from motion notification body *)",
+      "Bash(git -C \"C:\\\\Users\\\\matth\\\\OneDrive\\\\Desktop\\\\Programming\\\\security_camera_app\" add client/src/pages/Viewer.jsx client/src/index.css)",
+      "Bash(git -C 'C:\\\\Users\\\\matth\\\\OneDrive\\\\Desktop\\\\Programming\\\\security_camera_app' commit -m 'Add reverse geocoded address to GPS log entries *)",
+      "Bash(npm install *)",
+      "Bash(eas *)",
+      "Bash(where adb *)",
+      "Bash(adb --version)",
+      "Bash(dir \"%LOCALAPPDATA%\\\\Android\\\\Sdk\")",
+      "Bash(dir \"C:\\\\Program Files\\\\Android\")",
+      "Bash(dir %USERPROFILE%\\\\AppData\\\\Local\\\\Android *)",
+      "Read(//c/Users/matth/OneDrive/Desktop/Programming/**)",
+      "Bash(npx create-expo-app *)",
+      "Bash(npx expo *)",
+      "Bash(node -e \"const pkg = require\\('./node_modules/react-native-vision-camera/package.json'\\); console.log\\(pkg.version, pkg.main\\)\")",
+      "Bash(node -e \"console.log\\(require\\('./node_modules/react-native-vision-camera/package.json'\\).version\\)\")",
+      "Bash(node -e \"console.log\\(require\\('./node_modules/@notifee/react-native/package.json'\\).version\\)\")",
+      "Bash(git init *)",
+      "Bash(C:/Users/matth/AppData/Local/Android/Sdk/platform-tools/adb.exe devices *)",
+      "Bash(ipconfig)",
+      "Bash(node -e ' *)",
+      "Bash(node -e \"const fs=require\\('fs'\\); ['assets/icon.png','assets/adaptive-icon.png','assets/splash.png'].forEach\\(f => { try { const s=fs.statSync\\(f\\); console.log\\(f, s.size, 'bytes'\\); } catch\\(e\\) { console.log\\(f, 'MISSING'\\); } }\\)\")",
+      "PowerShell(Add-Type -AssemblyName System.Drawing; $img = [System.Drawing.Image]::FromFile\\(\"C:\\\\Users\\\\matth\\\\OneDrive\\\\Desktop\\\\camera.png\"\\); \"$\\($img.Width\\) x $\\($img.Height\\)\"; $img.Dispose\\(\\))",
+      "Bash(cd *)",
+      "PowerShell(Move-Item *)"
     ]
   }
 }
