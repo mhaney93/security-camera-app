@@ -3,13 +3,18 @@ import {
   View, Text, TouchableOpacity, StyleSheet,
   Platform, AppState, SafeAreaView, ScrollView,
 } from 'react-native';
-import { Camera, useCameraDevice, useCameraPermission, useMicrophonePermission } from 'react-native-vision-camera';
+import {
+  Camera, useCameraDevice, useCameraPermission, useMicrophonePermission,
+  useFrameProcessor, runAtTargetFps,
+} from 'react-native-vision-camera';
+import { useSharedValue, useRunOnJS } from 'react-native-worklets-core';
 import { mediaDevices, RTCPeerConnection } from 'react-native-webrtc';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import * as FileSystem from 'expo-file-system';
 import * as Location from 'expo-location';
 import notifee, { AndroidImportance } from '@notifee/react-native';
 import { createSocket, createApiFetch } from './socket';
+import { MOTION_COOLDOWN_MS, sampleFrame, hasMotion } from './motion';
 
 const ICE_CONFIG = {
   iceServers: [
@@ -36,6 +41,8 @@ export default function CameraScreen({ session, onStop }) {
   const isMutedRef = useRef(true);
   const appStateRef = useRef(AppState.currentState);
   const usingBackRef = useRef(true);
+  const motionTimerRef = useRef(null);
+  const motionOnCooldownRef = useRef(false);
 
   const [status, setStatus] = useState('Starting...');
   const [viewerCount, setViewerCount] = useState(0);
@@ -44,10 +51,63 @@ export default function CameraScreen({ session, onStop }) {
   const [gps, setGps] = useState(null);
   const [showSettings, setShowSettings] = useState(false);
   const [usingBack, setUsingBack] = useState(true);
+  const [motionEnabled, setMotionEnabled] = useState(true);
+  const [motionActive, setMotionActive] = useState(false);
 
   const { hasPermission: hasCamPerm, requestPermission: reqCamPerm } = useCameraPermission();
   const { hasPermission: hasMicPerm, requestPermission: reqMicPerm } = useMicrophonePermission();
   const device = useCameraDevice(usingBack ? 'back' : 'front');
+
+  // ─── Motion detection: same alert + 60s cooldown as the web camera ──────────
+  const handleMotion = useCallback(() => {
+    if (!isMountedRef.current || motionOnCooldownRef.current) return;
+    motionOnCooldownRef.current = true;
+    setMotionActive(true);
+    socketRef.current?.emit('motion-detected', { roomId: roomCode });
+    motionTimerRef.current = setTimeout(() => {
+      motionOnCooldownRef.current = false;
+      setMotionActive(false);
+    }, MOTION_COOLDOWN_MS);
+  }, [roomCode]);
+
+  const onMotion = useRunOnJS(handleMotion, [handleMotion]);
+  const prevSamples = useSharedValue(null);
+  const motionEnabledShared = useSharedValue(true);
+
+  // Compares a coarse grid of the frame once per second. The frame processor stays
+  // attached even when motion is off so toggling never reconfigures the camera
+  // session (which would interrupt the in-progress recording segment).
+  const frameProcessor = useFrameProcessor((frame) => {
+    'worklet';
+    runAtTargetFps(1, () => {
+      'worklet';
+      if (!motionEnabledShared.value) {
+        prevSamples.value = null;
+        return;
+      }
+      let curr;
+      try {
+        curr = sampleFrame(new Uint8Array(frame.toArrayBuffer()), frame.width, frame.height);
+      } catch (e) {
+        return; // pixel access unavailable (e.g. Android < 9) — skip motion detection
+      }
+      const prev = prevSamples.value;
+      if (prev && prev.width === frame.width && prev.height === frame.height && hasMotion(prev.samples, curr)) {
+        onMotion();
+      }
+      prevSamples.value = { width: frame.width, height: frame.height, samples: curr };
+    });
+  }, [onMotion, prevSamples, motionEnabledShared]);
+
+  // Pause/resume motion detection when toggled without touching the camera session
+  useEffect(() => {
+    motionEnabledShared.value = motionEnabled;
+    if (!motionEnabled) {
+      clearTimeout(motionTimerRef.current);
+      motionOnCooldownRef.current = false;
+      setMotionActive(false);
+    }
+  }, [motionEnabled, motionEnabledShared]);
 
   // ─── Upload a recorded video chunk then delete the temp file ────────────────
   const uploadChunk = useCallback(async (filePath) => {
@@ -226,6 +286,7 @@ export default function CameraScreen({ session, onStop }) {
     return () => {
       isMountedRef.current = false;
       clearTimeout(recTimerRef.current);
+      clearTimeout(motionTimerRef.current);
       appStateSub.remove();
       gpsWatchRef.current?.remove();
 
@@ -266,6 +327,7 @@ export default function CameraScreen({ session, onStop }) {
   function flipCamera() {
     const next = !usingBack;
     usingBackRef.current = next;
+    prevSamples.value = null; // don't compare frames across the camera switch
     setUsingBack(next);
   }
 
@@ -304,6 +366,7 @@ export default function CameraScreen({ session, onStop }) {
           video
           audio
           onInitialized={handleCameraReady}
+          frameProcessor={frameProcessor}
         />
 
         {/* Status badges */}
@@ -316,6 +379,12 @@ export default function CameraScreen({ session, onStop }) {
             <View style={styles.badgeRec}>
               <View style={[styles.dot, { backgroundColor: '#ff1744' }]} />
               <Text style={styles.badgeRecText}>REC</Text>
+            </View>
+          )}
+          {motionActive && (
+            <View style={styles.badgeMotion}>
+              <View style={[styles.dot, { backgroundColor: '#ff6d00' }]} />
+              <Text style={styles.badgeMotionText}>MOTION</Text>
             </View>
           )}
           <View style={styles.badgeCount}>
@@ -332,6 +401,15 @@ export default function CameraScreen({ session, onStop }) {
                 {!isMuted && <Text style={styles.checkmark}>✓</Text>}
               </View>
               <Text style={styles.toggleText}>Microphone {isMuted ? 'off' : 'on'}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.toggleRow} onPress={() => setMotionEnabled(m => !m)} activeOpacity={0.7}>
+              <View style={[styles.checkbox, motionEnabled && styles.checkboxOn]}>
+                {motionEnabled && <Text style={styles.checkmark}>✓</Text>}
+              </View>
+              <Text style={styles.toggleText}>
+                Motion detection {motionEnabled ? 'on' : 'off'}
+                {motionEnabled && motionActive && <Text style={styles.toggleHint}>  (cooldown 60s)</Text>}
+              </Text>
             </TouchableOpacity>
           </View>
         )}
@@ -382,6 +460,8 @@ const styles = StyleSheet.create({
   badgeLiveText: { color: '#00e676', fontSize: 11, fontWeight: '700', letterSpacing: 0.5 },
   badgeRec: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, backgroundColor: '#ff174422' },
   badgeRecText: { color: '#ff1744', fontSize: 11, fontWeight: '700' },
+  badgeMotion: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, backgroundColor: '#ff6d0022' },
+  badgeMotionText: { color: '#ff6d00', fontSize: 11, fontWeight: '700' },
   badgeCount: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, backgroundColor: '#88888822' },
   badgeCountText: { color: '#888', fontSize: 11, fontWeight: '700' },
 
@@ -392,6 +472,7 @@ const styles = StyleSheet.create({
   checkboxOn: { backgroundColor: '#00e676', borderColor: '#00e676' },
   checkmark: { color: '#000', fontSize: 11, fontWeight: '700' },
   toggleText: { color: '#888', fontSize: 14 },
+  toggleHint: { color: '#555', fontSize: 12 },
 
   gpsBox: { backgroundColor: '#161616', borderWidth: 1, borderColor: '#333', borderRadius: 10, padding: 10 },
   gpsText: { color: '#888', fontSize: 12, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' },

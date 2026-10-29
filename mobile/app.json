@@ -55,6 +55,14 @@
         {
           "locationWhenInUsePermission": "ACME Camera uses GPS to tag recordings with location."
         }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 26
+          }
+        }
       ]
     ],
     "extra": {
