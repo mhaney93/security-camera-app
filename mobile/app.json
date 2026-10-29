@@ -1,0 +1,67 @@
+{
+  "expo": {
+    "name": "ACME Camera",
+    "slug": "acme-camera",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "backgroundColor": "#0a0a0a"
+    },
+    "ios": {
+      "bundleIdentifier": "com.acme.camera",
+      "infoPlist": {
+        "NSCameraUsageDescription": "ACME Camera needs camera access to record and stream video.",
+        "NSMicrophoneUsageDescription": "ACME Camera needs microphone access to record audio.",
+        "NSLocationWhenInUseUsageDescription": "ACME Camera uses GPS to tag recordings with location.",
+        "UIBackgroundModes": [
+          "audio",
+          "fetch",
+          "processing"
+        ]
+      }
+    },
+    "android": {
+      "package": "com.acme.camera",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0a0a0a"
+      },
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_CAMERA",
+        "android.permission.FOREGROUND_SERVICE_MICROPHONE",
+        "android.permission.WAKE_LOCK",
+        "android.permission.INTERNET",
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION"
+      ]
+    },
+    "plugins": [
+      [
+        "react-native-vision-camera",
+        {
+          "cameraPermissionText": "ACME Camera needs camera access to record and stream video.",
+          "enableMicrophonePermission": true,
+          "microphonePermissionText": "ACME Camera needs microphone access to record audio."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "ACME Camera uses GPS to tag recordings with location."
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "ce74b17d-0106-43ae-a315-ce35c8086e02"
+      }
+    },
+    "owner": "mhaney93"
+  }
+}
