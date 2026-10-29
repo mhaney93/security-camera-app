@@ -53,6 +53,7 @@ export default function CameraScreen({ session, onStop }) {
   const [usingBack, setUsingBack] = useState(true);
   const [motionEnabled, setMotionEnabled] = useState(true);
   const [motionActive, setMotionActive] = useState(false);
+  const [motionUnsupported, setMotionUnsupported] = useState(false);
 
   const { hasPermission: hasCamPerm, requestPermission: reqCamPerm } = useCameraPermission();
   const { hasPermission: hasMicPerm, requestPermission: reqMicPerm } = useMicrophonePermission();
@@ -60,10 +61,10 @@ export default function CameraScreen({ session, onStop }) {
 
   // ─── Motion detection: same alert + 60s cooldown as the web camera ──────────
   const handleMotion = useCallback(() => {
-    if (!isMountedRef.current || motionOnCooldownRef.current) return;
+    if (!isMountedRef.current || motionOnCooldownRef.current || !socketRef.current) return;
     motionOnCooldownRef.current = true;
     setMotionActive(true);
-    socketRef.current?.emit('motion-detected', { roomId: roomCode });
+    socketRef.current.emit('motion-detected', { roomId: roomCode });
     motionTimerRef.current = setTimeout(() => {
       motionOnCooldownRef.current = false;
       setMotionActive(false);
@@ -71,8 +72,10 @@ export default function CameraScreen({ session, onStop }) {
   }, [roomCode]);
 
   const onMotion = useRunOnJS(handleMotion, [handleMotion]);
+  const onMotionUnsupported = useRunOnJS(setMotionUnsupported, []);
   const prevSamples = useSharedValue(null);
   const motionEnabledShared = useSharedValue(true);
+  const motionUnsupportedShared = useSharedValue(false);
 
   // Compares a coarse grid of the frame once per second. The frame processor stays
   // attached even when motion is off so toggling never reconfigures the camera
@@ -81,6 +84,7 @@ export default function CameraScreen({ session, onStop }) {
     'worklet';
     runAtTargetFps(1, () => {
       'worklet';
+      if (motionUnsupportedShared.value) return;
       if (!motionEnabledShared.value) {
         prevSamples.value = null;
         return;
@@ -89,6 +93,8 @@ export default function CameraScreen({ session, onStop }) {
       try {
         curr = sampleFrame(new Uint8Array(frame.toArrayBuffer()), frame.width, frame.height);
       } catch (e) {
+        motionUnsupportedShared.value = true;
+        onMotionUnsupported(true);
         return; // pixel access unavailable (e.g. Android < 9) — skip motion detection
       }
       const prev = prevSamples.value;
@@ -97,7 +103,7 @@ export default function CameraScreen({ session, onStop }) {
       }
       prevSamples.value = { width: frame.width, height: frame.height, samples: curr };
     });
-  }, [onMotion, prevSamples, motionEnabledShared]);
+  }, [onMotion, onMotionUnsupported, prevSamples, motionEnabledShared, motionUnsupportedShared]);
 
   // Pause/resume motion detection when toggled without touching the camera session
   useEffect(() => {
@@ -402,14 +408,18 @@ export default function CameraScreen({ session, onStop }) {
               </View>
               <Text style={styles.toggleText}>Microphone {isMuted ? 'off' : 'on'}</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.toggleRow} onPress={() => setMotionEnabled(m => !m)} activeOpacity={0.7}>
-              <View style={[styles.checkbox, motionEnabled && styles.checkboxOn]}>
-                {motionEnabled && <Text style={styles.checkmark}>✓</Text>}
+            <TouchableOpacity style={styles.toggleRow} onPress={() => setMotionEnabled(m => !m)} disabled={motionUnsupported} activeOpacity={0.7}>
+              <View style={[styles.checkbox, motionEnabled && !motionUnsupported && styles.checkboxOn]}>
+                {motionEnabled && !motionUnsupported && <Text style={styles.checkmark}>✓</Text>}
               </View>
-              <Text style={styles.toggleText}>
-                Motion detection {motionEnabled ? 'on' : 'off'}
-                {motionEnabled && motionActive && <Text style={styles.toggleHint}>  (cooldown 60s)</Text>}
-              </Text>
+              {motionUnsupported ? (
+                <Text style={styles.toggleText}>Motion detection unavailable on this device</Text>
+              ) : (
+                <Text style={styles.toggleText}>
+                  Motion detection {motionEnabled ? 'on' : 'off'}
+                  {motionEnabled && motionActive && <Text style={styles.toggleHint}>  (cooldown 60s)</Text>}
+                </Text>
+              )}
             </TouchableOpacity>
           </View>
         )}
