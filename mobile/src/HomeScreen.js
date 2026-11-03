@@ -38,7 +38,7 @@ export default function HomeScreen({ onStart }) {
     <SafeAreaView style={styles.safe}>
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-          <Text style={styles.title}>ACME</Text>
+          <Text style={styles.title}>Quantum 2050</Text>
           <Text style={styles.subtitle}>Camera Device</Text>
 
           <View style={styles.card}>

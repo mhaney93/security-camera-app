@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "ACME Camera",
+    "name": "Quantum 2050 Camera",
     "slug": "acme-camera",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -12,9 +12,9 @@
     "ios": {
       "bundleIdentifier": "com.acme.camera",
       "infoPlist": {
-        "NSCameraUsageDescription": "ACME Camera needs camera access to record and stream video.",
-        "NSMicrophoneUsageDescription": "ACME Camera needs microphone access to record audio.",
-        "NSLocationWhenInUseUsageDescription": "ACME Camera uses GPS to tag recordings with location.",
+        "NSCameraUsageDescription": "Quantum 2050 Camera needs camera access to record and stream video.",
+        "NSMicrophoneUsageDescription": "Quantum 2050 Camera needs microphone access to record audio.",
+        "NSLocationWhenInUseUsageDescription": "Quantum 2050 Camera uses GPS to tag recordings with location.",
         "UIBackgroundModes": [
           "audio",
           "fetch",
@@ -45,15 +45,15 @@
       [
         "react-native-vision-camera",
         {
-          "cameraPermissionText": "ACME Camera needs camera access to record and stream video.",
+          "cameraPermissionText": "Quantum 2050 Camera needs camera access to record and stream video.",
           "enableMicrophonePermission": true,
-          "microphonePermissionText": "ACME Camera needs microphone access to record audio."
+          "microphonePermissionText": "Quantum 2050 Camera needs microphone access to record audio."
         }
       ],
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "ACME Camera uses GPS to tag recordings with location."
+          "locationWhenInUsePermission": "Quantum 2050 Camera uses GPS to tag recordings with location."
         }
       ],
       [

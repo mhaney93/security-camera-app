@@ -14,6 +14,8 @@
 	<string>6.0</string>
 	<key>CFBundleIconName</key>
 	<string>AppIcon</string>
+	<key>CFBundleDisplayName</key>
+	<string>Quantum 2050 Camera</string>
 	<key>CFBundleName</key>
 	<string>$(PRODUCT_NAME)</string>
 	<key>CFBundlePackageType</key>
@@ -52,11 +54,11 @@
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
 	<key>NSCameraUsageDescription</key>
-	<string>ACME Camera needs camera access to record and stream video.</string>
+	<string>Quantum 2050 Camera needs camera access to record and stream video.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>ACME Camera needs microphone access to record audio.</string>
+	<string>Quantum 2050 Camera needs microphone access to record audio.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>ACME Camera uses GPS to tag recordings with location.</string>
+	<string>Quantum 2050 Camera uses GPS to tag recordings with location.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>audio</string>
