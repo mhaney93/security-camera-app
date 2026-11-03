@@ -211,7 +211,7 @@ export default function CameraScreen({ session, onStop }) {
       if (Platform.OS === 'android') {
         await notifee.createChannel({ id: 'rec', name: 'Camera Recording', importance: AndroidImportance.LOW });
         await notifee.displayNotification({
-          title: 'ACME Camera',
+          title: 'Quantum 2050 Camera',
           body: 'Recording in progress — tap to return',
           android: {
             channelId: 'rec',

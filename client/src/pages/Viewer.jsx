@@ -103,7 +103,7 @@ export default function Viewer() {
         try {
           const res = await fetch(
             `https://nominatim.openstreetmap.org/reverse?lat=${point.lat}&lon=${point.lng}&format=json`,
-            { headers: { 'User-Agent': 'ACME-SecurityCam/1.0' } }
+            { headers: { 'User-Agent': 'Quantum2050-SecurityCam/1.0' } }
           );
           const data = await res.json();
           if (!cancelled) {

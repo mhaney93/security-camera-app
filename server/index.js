@@ -55,7 +55,7 @@ app.get('/privacy', (_req, res) => {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Privacy Policy – ACME Camera</title>
+  <title>Privacy Policy – Quantum 2050 Camera</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; max-width: 680px; margin: 40px auto; padding: 0 20px; color: #222; line-height: 1.6; }
     h1 { font-size: 1.6rem; } h2 { font-size: 1.1rem; margin-top: 2rem; }
@@ -65,7 +65,7 @@ app.get('/privacy', (_req, res) => {
 </head>
 <body>
   <h1>Privacy Policy</h1>
-  <p><strong>ACME Camera</strong> &mdash; Last updated: May 20, 2026</p>
+  <p><strong>Quantum 2050 Camera</strong> &mdash; Last updated: May 20, 2026</p>
 
   <h2>What we collect</h2>
   <ul>
